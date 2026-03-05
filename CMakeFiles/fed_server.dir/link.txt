@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/fed_server.dir/src/fed/server_main.cpp.o CMakeFiles/fed_server.dir/src/fed/server.cpp.o CMakeFiles/fed_server.dir/src/fed/crypto.cpp.o -o fed_server  -lpthread

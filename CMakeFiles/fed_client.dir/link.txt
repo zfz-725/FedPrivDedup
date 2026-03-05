@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/fed_client.dir/src/fed/client_main.cpp.o CMakeFiles/fed_client.dir/src/fed/client.cpp.o CMakeFiles/fed_client.dir/src/fed/crypto.cpp.o -o fed_client  -lpthread
