@@ -1,3 +1,4 @@
+/root/Dev/FED/CMakeFiles/fed_cuda.dir
 /root/Dev/FED/CMakeFiles/fed_server.dir
 /root/Dev/FED/CMakeFiles/fed_client.dir
 /root/Dev/FED/CMakeFiles/edit_cache.dir

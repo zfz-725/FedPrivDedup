@@ -127,6 +127,9 @@ fed_client: CMakeFiles/fed_client.dir/src/fed/client_main.cpp.o
 fed_client: CMakeFiles/fed_client.dir/src/fed/client.cpp.o
 fed_client: CMakeFiles/fed_client.dir/src/fed/crypto.cpp.o
 fed_client: CMakeFiles/fed_client.dir/build.make
+fed_client: libfed_cuda.a
+fed_client: /root/miniconda3/envs/fed_env/lib64/libcudart_static.a
+fed_client: /usr/lib/x86_64-linux-gnu/librt.a
 fed_client: CMakeFiles/fed_client.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable fed_client"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/fed_client.dir/link.txt --verbose=$(VERBOSE)

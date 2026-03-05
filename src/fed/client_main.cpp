@@ -1,12 +1,19 @@
 #include "client.h"
 #include <iostream>
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc != 6) {
+        std::cout << "Usage: " << argv[0] << " <client_id> <org_id> <server_address> <server_port> <data_dir>" << std::endl;
+        return 1;
+    }
+    
     ClientConfig config;
-    config.client_id = "client1";
-    config.server_address = "127.0.0.1";
-    config.server_port = 8080;
-    config.org_id = "org1";
+    config.client_id = argv[1];
+    config.org_id = argv[2];
+    config.server_address = argv[3];
+    config.server_port = std::stoi(argv[4]);
+    config.data_dir = argv[5];
+    config.output_dir = "./output_" + config.client_id;
     
     FedClient client(config);
     

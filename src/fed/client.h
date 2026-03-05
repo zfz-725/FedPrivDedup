@@ -34,6 +34,7 @@ public:
     bool init();
     bool process_local_data();
     bool send_encrypted_candidates();
+    bool trigger_global_calculation();
     bool receive_and_process_results();
     bool run();
     

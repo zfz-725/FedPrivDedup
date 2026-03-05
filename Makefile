@@ -117,6 +117,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named fed_cuda
+
+# Build rule for target.
+fed_cuda: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 fed_cuda
+.PHONY : fed_cuda
+
+# fast build rule for target.
+fed_cuda/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_cuda.dir/build.make CMakeFiles/fed_cuda.dir/build
+.PHONY : fed_cuda/fast
+
+#=============================================================================
 # Target rules for targets named fed_server
 
 # Build rule for target.
@@ -274,6 +287,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... fed_client"
+	@echo "... fed_cuda"
 	@echo "... fed_server"
 	@echo "... src/fed/client.o"
 	@echo "... src/fed/client.i"

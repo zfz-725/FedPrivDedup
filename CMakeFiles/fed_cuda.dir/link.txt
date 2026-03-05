@@ -1,0 +1,2 @@
+/usr/bin/ar qc libfed_cuda.a CMakeFiles/fed_cuda.dir/src/fed/fed_cuda_generated_crypto_cuda.cu.o
+/usr/bin/ranlib libfed_cuda.a

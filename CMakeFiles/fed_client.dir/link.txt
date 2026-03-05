@@ -1,1 +1,1 @@
-/usr/bin/c++ CMakeFiles/fed_client.dir/src/fed/client_main.cpp.o CMakeFiles/fed_client.dir/src/fed/client.cpp.o CMakeFiles/fed_client.dir/src/fed/crypto.cpp.o -o fed_client  -lpthread
+/usr/bin/c++ CMakeFiles/fed_client.dir/src/fed/client_main.cpp.o CMakeFiles/fed_client.dir/src/fed/client.cpp.o CMakeFiles/fed_client.dir/src/fed/crypto.cpp.o -o fed_client  -lpthread libfed_cuda.a /root/miniconda3/envs/fed_env/lib64/libcudart_static.a -ldl /usr/lib/x86_64-linux-gnu/librt.a
