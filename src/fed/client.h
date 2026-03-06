@@ -33,6 +33,7 @@ public:
     FedClient(const ClientConfig& config);
     bool init();
     bool process_local_data();
+    bool perform_local_deduplication();
     bool send_encrypted_candidates();
     bool trigger_global_calculation();
     bool receive_and_process_results();

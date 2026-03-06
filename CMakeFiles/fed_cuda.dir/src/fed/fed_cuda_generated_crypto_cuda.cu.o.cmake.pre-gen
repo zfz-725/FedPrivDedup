@@ -50,17 +50,19 @@
 # generated_cubin_file:STRING=<> File to generate.  This argument must be passed
 #                                                   in if build_cubin is true.
 
+cmake_policy(PUSH)
+cmake_policy(SET CMP0007 NEW)
 if(NOT generated_file)
   message(FATAL_ERROR "You must specify generated_file on the command line")
 endif()
 
 # Set these up as variables to make reading the generated file easier
-set(CMAKE_COMMAND "/root/miniconda3/envs/fed_env/bin/cmake") # path
+set(CMAKE_COMMAND "/usr/bin/cmake") # path
 set(source_file "/root/Dev/FED/src/fed/crypto_cuda.cu") # path
 set(NVCC_generated_dependency_file "/root/Dev/FED/CMakeFiles/fed_cuda.dir/src/fed/fed_cuda_generated_crypto_cuda.cu.o.NVCC-depend") # path
 set(cmake_dependency_file "/root/Dev/FED/CMakeFiles/fed_cuda.dir/src/fed/fed_cuda_generated_crypto_cuda.cu.o.depend") # path
-set(CUDA_make2cmake "/root/miniconda3/envs/fed_env/share/cmake-4.2/Modules/FindCUDA/make2cmake.cmake") # path
-set(CUDA_parse_cubin "/root/miniconda3/envs/fed_env/share/cmake-4.2/Modules/FindCUDA/parse_cubin.cmake") # path
+set(CUDA_make2cmake "/usr/share/cmake-3.28/Modules/FindCUDA/make2cmake.cmake") # path
+set(CUDA_parse_cubin "/usr/share/cmake-3.28/Modules/FindCUDA/parse_cubin.cmake") # path
 set(build_cubin OFF) # bool
 set(CUDA_HOST_COMPILER "/usr/bin/cc") # path
 # We won't actually use these variables for now, but we need to set this, in
@@ -308,3 +310,5 @@ if( build_cubin )
     )
 
 endif()
+
+cmake_policy(POP)

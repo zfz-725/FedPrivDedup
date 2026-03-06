@@ -1,6 +1,8 @@
 #include "client.h"
 #include "crypto.h"
-#include "lsh.h"
+#include "fed_cuda.h"
+#include "union_find.h"
+#include "data_preprocessor.h"
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
@@ -13,6 +15,7 @@
 #include <fstream>
 #include <filesystem>
 #include <random>
+#include <set>
 
 using namespace std;
 
@@ -58,13 +61,63 @@ bool FedClient::get_global_params() {
         std::string key_cmd;
         iss >> key_cmd;
         if (key_cmd == "KEY") {
-            iss >> server_key;
-            cout << "[Client] Received global parameters and key" << endl;
+            std::string hex_key;
+            // 读取剩余的整行作为十六进制密钥
+            std::getline(iss, hex_key);
+            // 去除前导空格
+            size_t start = hex_key.find_first_not_of(" \t\r\n");
+            if (start != std::string::npos) {
+                hex_key = hex_key.substr(start);
+            }
+            // 去除尾部换行符
+            size_t end = hex_key.find_last_not_of(" \t\r\n");
+            if (end != std::string::npos) {
+                hex_key = hex_key.substr(0, end + 1);
+            }
+            
+            cout << "[Client] Received hex key length: " << hex_key.length() << endl;
+            
+            // 将十六进制字符串转换为二进制密钥
+            server_key.clear();
+            for (size_t i = 0; i + 1 < hex_key.length(); i += 2) {
+                std::string byte_str = hex_key.substr(i, 2);
+                try {
+                    unsigned char byte = static_cast<unsigned char>(std::stoul(byte_str, nullptr, 16));
+                    server_key += byte;
+                } catch (const std::exception& e) {
+                    cerr << "[Client] Error parsing hex key at position " << i << ": " << byte_str << endl;
+                    return false;
+                }
+            }
+            
+            cout << "[Client] Received global parameters and key (length: " << server_key.length() << " bytes)" << endl;
             return true;
         }
     }
     
     return false;
+}
+
+// 计算LSH桶ID - 按照方案文档的完整LSH带划分算法
+int calculate_bucket_id(const std::vector<uint32_t>& signature, int num_bands, int num_hash) {
+    // 按照FED方案：将签名矩阵划分为b个带，每个带r行
+    // 计算每个带的桶ID，使用所有带的组合作为最终桶ID
+    int rows_per_band = num_hash / num_bands;
+    int bucket_id = 0;
+    
+    for (int b = 0; b < num_bands; ++b) {
+        unsigned int band_sum = 0;
+        for (int r = 0; r < rows_per_band; ++r) {
+            int idx = b * rows_per_band + r;
+            if (idx < num_hash) {
+                band_sum += signature[idx];
+            }
+        }
+        // 使用带内哈希值的和对桶数取模
+        bucket_id = (bucket_id * 31 + band_sum) % 1000003; // 使用大质数减少冲突
+    }
+    
+    return bucket_id;
 }
 
 bool FedClient::process_local_data() {
@@ -88,138 +141,139 @@ bool FedClient::process_local_data() {
         }
     }
     
+    // 初始化FedCuda进行GPU加速的签名生成
+    FedCuda fed_cuda(
+        config.local_params.num_hash,
+        config.local_params.shingle_len,
+        config.local_params.bucket,
+        config.local_params.seed
+    );
+    
+    if (!fed_cuda.init()) {
+        cout << "[Client] Failed to initialize FedCuda" << endl;
+        return false;
+    }
+    
+    cout << "[Client] FedCuda initialized successfully" << endl;
+    
     if (file_list.empty()) {
         cout << "[Client] No JSONL files found in " << data_dir << endl;
         cout << "[Client] Generating sample data for testing..." << endl;
         
         int num_samples = 100;
         int num_hash = config.local_params.num_hash;
-        int bucket_count = config.local_params.bucket;
+        int num_bands = config.local_params.bucket;
+        
+        // 生成测试文档文本
+        std::vector<std::string> test_texts;
+        for (int i = 0; i < num_samples; ++i) {
+            // 前10个文档使用相同内容，这样不同客户端会生成相同的签名用于测试跨机构去重
+            if (i < 10) {
+                test_texts.push_back("machine learning artificial intelligence test document " + std::to_string(i));
+            } else {
+                test_texts.push_back("unique content for document " + std::to_string(i) + " with random data");
+            }
+        }
+        
+        // 使用GPU批量生成签名
+        auto results = fed_cuda.compute_batch_signatures(test_texts);
         
         for (int i = 0; i < num_samples; ++i) {
             DocumentInfo doc;
             doc.original_id = config.client_id + "_doc" + std::to_string(i);
             doc.random_id = generate_random_id();
+            doc.signature = results[i].signature;
             
-            std::vector<uint32_t> signature;
-            
-            // 前10个文档使用相同的种子，这样不同客户端会生成相同的签名用于测试跨机构去重
-            unsigned int seed;
-            if (i < 10) {
-                seed = config.local_params.seed + i; // 使用相同的种子
-            } else {
-                seed = config.local_params.seed + i + 1000; // 不同的种子
-            }
-            
-            std::mt19937 gen(seed);
-            std::uniform_int_distribution<uint32_t> dis(0, 4294967);
-            
-            for (int j = 0; j < num_hash; ++j) {
-                signature.push_back(dis(gen));
-            }
-            
-            doc.signature = signature;
-            
-            int bucket_id = 0;
-            int h = num_hash / bucket_count;
-            for (int b = 0; b < bucket_count; ++b) {
-                unsigned int sum = 0;
-                for (int k = b * h; k < (b + 1) * h; ++k) {
-                    sum += signature[k];
-                }
-                bucket_id = sum % bucket_count;
-            }
-            doc.bucket_id = bucket_id;
+            // 使用完整的LSH桶划分算法计算桶ID
+            doc.bucket_id = calculate_bucket_id(doc.signature, num_bands, num_hash);
             
             local_candidates.push_back(doc);
             id_mapping[doc.random_id] = doc.original_id;
         }
         
-        cout << "[Client] Generated " << local_candidates.size() << " sample documents" << endl;
+        cout << "[Client] Generated " << local_candidates.size() << " sample documents with GPU acceleration" << endl;
         return true;
     }
     
     cout << "[Client] Found " << file_list.size() << " files to process" << endl;
-    
+
+    // 初始化数据预处理器（使用4线程并行加载）
+    DataPreprocessor preprocessor(200, 1000, 4);
+    if (!preprocessor.init()) {
+        cout << "[Client] Failed to initialize data preprocessor" << endl;
+        return false;
+    }
+
+    cout << "[Client] Data preprocessor initialized (min_length=200, buffer_size=1000, threads=4)" << endl;
+
+    // 处理JSONL文件
     for (size_t file_idx = 0; file_idx < file_list.size(); ++file_idx) {
         fs::path input_path(file_list[file_idx]);
         std::string filename = input_path.stem().string();
-        std::string hash_file = output_dir + "/" + filename + "_hashresult.bin";
-        
-        if (fs::exists(hash_file)) {
-            std::ifstream hash_in(hash_file, std::ios::binary);
-            if (hash_in) {
-                int total_values = config.local_params.num_hash + config.local_params.bucket;
-                std::vector<uint32_t> hash_data;
-                hash_data.resize(total_values);
-                
-                int doc_idx = 0;
-                while (hash_in.read(reinterpret_cast<char*>(hash_data.data()), total_values * sizeof(uint32_t))) {
-                    DocumentInfo doc;
-                    doc.original_id = filename + "_doc" + std::to_string(doc_idx);
-                    doc.random_id = generate_random_id();
-                    
-                    for (int i = 0; i < config.local_params.num_hash; ++i) {
-                        doc.signature.push_back(hash_data[i]);
-                    }
-                    
-                    int bucket_id = hash_data[config.local_params.num_hash];
-                    doc.bucket_id = bucket_id;
-                    
-                    local_candidates.push_back(doc);
-                    id_mapping[doc.random_id] = doc.original_id;
-                    
-                    doc_idx++;
-                }
-                
-                hash_in.close();
-                cout << "[Client] Loaded " << doc_idx << " documents from " << hash_file << endl;
-            }
-        } else {
-            cout << "[Client] Hash result file not found: " << hash_file << endl;
+
+        cout << "[Client] Processing file: " << file_list[file_idx] << endl;
+
+        // 使用CPU并行加载文档（包含NFC归一化、长度过滤）
+        auto documents = preprocessor.load_documents_parallel(file_list[file_idx]);
+
+        if (documents.empty()) {
+            cout << "[Client] No valid documents found in " << file_list[file_idx] << endl;
+            continue;
         }
+
+        cout << "[Client] Loaded " << documents.size() << " documents after parallel preprocessing, generating signatures with GPU..." << endl;
+        
+        // 提取文本用于GPU签名生成
+        std::vector<std::string> texts;
+        for (const auto& doc : documents) {
+            texts.push_back(doc.text);
+        }
+        
+        // 使用GPU批量生成签名
+        auto results = fed_cuda.compute_batch_signatures(texts);
+        
+        int num_bands = config.local_params.bucket;
+        int num_hash = config.local_params.num_hash;
+        
+        for (size_t i = 0; i < results.size(); ++i) {
+            DocumentInfo doc;
+            doc.original_id = filename + "_doc" + std::to_string(documents[i].line_number);
+            doc.random_id = generate_random_id();
+            doc.signature = results[i].signature;
+            
+            // 使用完整的LSH桶划分算法计算桶ID
+            doc.bucket_id = calculate_bucket_id(doc.signature, num_bands, num_hash);
+            
+            local_candidates.push_back(doc);
+            id_mapping[doc.random_id] = doc.original_id;
+        }
+        
+        cout << "[Client] Processed " << results.size() << " documents from " << filename << endl;
     }
     
     if (local_candidates.empty()) {
         cout << "[Client] No candidates loaded, generating sample data..." << endl;
         int num_samples = 100;
         int num_hash = config.local_params.num_hash;
-        int bucket_count = config.local_params.bucket;
+        int num_bands = config.local_params.bucket;
+        
+        std::vector<std::string> test_texts;
+        for (int i = 0; i < num_samples; ++i) {
+            if (i < 10) {
+                test_texts.push_back("machine learning artificial intelligence test document " + std::to_string(i));
+            } else {
+                test_texts.push_back("unique content for document " + std::to_string(i) + " with random data");
+            }
+        }
+        
+        auto results = fed_cuda.compute_batch_signatures(test_texts);
         
         for (int i = 0; i < num_samples; ++i) {
             DocumentInfo doc;
             doc.original_id = config.client_id + "_doc" + std::to_string(i);
             doc.random_id = generate_random_id();
-            
-            std::vector<uint32_t> signature;
-            
-            // 前10个文档使用相同的种子，这样不同客户端会生成相同的签名用于测试跨机构去重
-            unsigned int seed;
-            if (i < 10) {
-                seed = config.local_params.seed + i; // 使用相同的种子
-            } else {
-                seed = config.local_params.seed + i + 1000; // 不同的种子
-            }
-            
-            std::mt19937 gen(seed);
-            std::uniform_int_distribution<uint32_t> dis(0, 4294967);
-            
-            for (int j = 0; j < num_hash; ++j) {
-                signature.push_back(dis(gen));
-            }
-            
-            doc.signature = signature;
-            
-            int bucket_id = 0;
-            int h = num_hash / bucket_count;
-            for (int b = 0; b < bucket_count; ++b) {
-                unsigned int sum = 0;
-                for (int k = b * h; k < (b + 1) * h; ++k) {
-                    sum += signature[k];
-                }
-                bucket_id = sum % bucket_count;
-            }
-            doc.bucket_id = bucket_id;
+            doc.signature = results[i].signature;
+            doc.bucket_id = calculate_bucket_id(doc.signature, num_bands, num_hash);
             
             local_candidates.push_back(doc);
             id_mapping[doc.random_id] = doc.original_id;
@@ -242,6 +296,45 @@ std::vector<unsigned char> FedClient::encrypt_signature(const std::vector<uint32
     
     // 使用AES加密
     return CryptoUtil::encrypt(data, server_key);
+}
+
+bool FedClient::perform_local_deduplication() {
+    cout << "[Client] Performing local deduplication..." << endl;
+    
+    if (local_candidates.empty()) {
+        cout << "[Client] No candidates for local deduplication" << endl;
+        return true;
+    }
+    
+    LocalDeduplicator deduplicator;
+    
+    for (size_t i = 0; i < local_candidates.size(); i++) {
+        deduplicator.add_document(i, local_candidates[i].signature);
+    }
+    
+    deduplicator.perform_local_deduplication(config.local_params.threshold);
+    
+    std::vector<int> duplicate_indices = deduplicator.get_duplicate_document_ids();
+    
+    if (!duplicate_indices.empty()) {
+        cout << "[Client] Found " << duplicate_indices.size() << " local duplicates" << endl;
+        
+        std::vector<DocumentInfo> filtered_candidates;
+        std::set<int> duplicate_set(duplicate_indices.begin(), duplicate_indices.end());
+        
+        for (size_t i = 0; i < local_candidates.size(); i++) {
+            if (duplicate_set.find(i) == duplicate_set.end()) {
+                filtered_candidates.push_back(local_candidates[i]);
+            }
+        }
+        
+        local_candidates = filtered_candidates;
+        cout << "[Client] After local deduplication: " << local_candidates.size() << " documents" << endl;
+    } else {
+        cout << "[Client] No local duplicates found" << endl;
+    }
+    
+    return true;
 }
 
 bool FedClient::send_encrypted_candidates() {
@@ -396,6 +489,7 @@ bool FedClient::receive_and_process_results() {
 bool FedClient::run() {
     if (!init()) return false;
     if (!process_local_data()) return false;
+    if (!perform_local_deduplication()) return false;
     if (!send_encrypted_candidates()) return false;
     
     // 触发全局相似度计算（最后一个客户端触发）

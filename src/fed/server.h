@@ -5,6 +5,8 @@
 #include <vector>
 #include <map>
 #include "params.h"
+#include "audit_logger.h"
+#include "auth_manager.h"
 
 struct EncryptedCandidate {
     std::string client_id;
@@ -44,6 +46,10 @@ private:
     std::map<int, std::vector<EncryptedCandidate>> bucket_candidates;
     std::map<std::string, std::vector<std::string>> duplicate_docs;
     std::map<std::string, std::string> client_keys;
+    
+    // 安全防护模块
+    std::unique_ptr<AuditLogger> audit_logger_;
+    std::unique_ptr<AuthManager> auth_manager_;
     
     // 用于处理大数据传输
     size_t pending_data_size;

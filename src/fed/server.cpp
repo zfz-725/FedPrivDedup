@@ -1,6 +1,7 @@
 #include "server.h"
 #include "crypto.h"
 #include "crypto_cuda.h"
+#include "decrypt_cuda.h"
 #include <iostream>
 #include <cstring>
 #include <cmath>
@@ -11,14 +12,58 @@
 #include <thread>
 #include <sstream>
 #include <algorithm>
+#include <iomanip>
+#include <cstdio>
+#include <memory>
 
 using namespace std;
+
+// 将二进制数据转换为十六进制字符串
+std::string bytes_to_hex(const std::string& data) {
+    std::string hex_str;
+    hex_str.reserve(data.length() * 2);
+    
+    for (size_t i = 0; i < data.length(); ++i) {
+        unsigned char c = static_cast<unsigned char>(data[i]);
+        char hex[3];
+        snprintf(hex, sizeof(hex), "%02x", c);
+        hex_str += hex;
+    }
+    
+    return hex_str;
+}
 
 FedServer::FedServer(const ServerConfig& config) : config(config) {
 }
 
 bool FedServer::init() {
     cout << "[Server] Initializing server..." << endl;
+    
+    // 初始化审计日志
+    audit_logger_ = std::make_unique<AuditLogger>("audit.log");
+    if (!audit_logger_->init()) {
+        cerr << "[Server] Failed to initialize audit logger" << endl;
+        return false;
+    }
+    
+    // 初始化认证管理器
+    auth_manager_ = std::make_unique<AuthManager>();
+    if (!auth_manager_->init()) {
+        cerr << "[Server] Failed to initialize auth manager" << endl;
+        return false;
+    }
+    
+    // 注册默认客户端（用于测试）
+    std::set<Permission> default_permissions = {Permission::READ, Permission::WRITE};
+    std::string api_key1, api_key2;
+    auth_manager_->generate_api_key(api_key1);
+    auth_manager_->generate_api_key(api_key2);
+    
+    auth_manager_->register_client("client1", "org1", api_key1, default_permissions);
+    auth_manager_->register_client("client2", "org2", api_key2, default_permissions);
+    
+    audit_logger_->log_info("SYSTEM", "INIT", "Server initialized successfully");
+    
     return true;
 }
 
@@ -50,8 +95,15 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         client_keys[client_id] = key;
         
         std::string params = get_global_params();
-        response = params + " KEY " + key + "\n";
+        
+        // 将密钥转换为十六进制字符串传输
+        std::string hex_key = bytes_to_hex(key);
+        
+        response = params + " KEY " + hex_key + "\n";
         cout << "[Server] New client connected: " << client_id << " (" << org_id << ")" << endl;
+        cout << "[Server] Sent response: '" << params << " KEY [" << hex_key.length() << " hex chars]'" << endl;
+        
+        audit_logger_->log_info(client_id, "CONNECT", "Client connected from " + org_id);
     } else if (request.substr(0, 15) == "CANDIDATES_DATA ") {
         std::istringstream iss(request.substr(15));
         size_t data_size;
@@ -59,6 +111,8 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         
         response = "READY_FOR_DATA\n";
         cout << "[Server] Ready to receive " << data_size << " bytes of candidates data" << endl;
+        
+        audit_logger_->log_info("UNKNOWN", "CANDIDATES_DATA", "Receiving " + std::to_string(data_size) + " bytes");
     } else if (request.substr(0, 1) != "C" && request.substr(0, 1) != "H" && request.substr(0, 1) != "G" && request.substr(0, 1) != "P" && request.substr(0, 1) != "R") {
         // 处理候选集数据
         cout << "[Server] Processing candidate data, request length: " << request.length() << endl;
@@ -100,6 +154,8 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         response = "CANDIDATES_RECEIVED\n";
         cout << "[Server] Received " << success_count << " candidates" << endl;
         cout << "[Server] Total candidates in memory: " << candidates.size() << endl;
+        
+        audit_logger_->log_info("UNKNOWN", "CANDIDATES_RECEIVED", "Received " + std::to_string(success_count) + " candidates");
     } else if (request.substr(0, 10) == "CANDIDATES" && request.find("_DATA") == std::string::npos) {
         std::istringstream iss(request.substr(10));
         std::string client_id;
@@ -108,9 +164,13 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         
         response = "READY\n";
         cout << "[Server] Ready to receive candidates from " << client_id << endl;
+        
+        audit_logger_->log_info(client_id, "CANDIDATES", "Ready to receive " + std::to_string(data_size) + " bytes");
     } else if (request == "CALCULATE") {
         perform_global_similarity();
         response = "CALCULATION_DONE\n";
+        
+        audit_logger_->log_info("SYSTEM", "CALCULATE", "Global similarity calculation completed");
     } else if (request.find("GET_RESULTS ") == 0) {
         size_t space_pos = request.find(" ");
         if (space_pos != std::string::npos) {
@@ -125,11 +185,14 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
                 }
             }
             response = "RESULTS " + std::to_string(duplicate_count) + duplicate_ids + "\n";
+            
+            audit_logger_->log_info(client_id, "GET_RESULTS", "Sent " + std::to_string(duplicate_count) + " duplicates");
         } else {
             response = "UNKNOWN_COMMAND\n";
         }
     } else {
         response = "UNKNOWN_COMMAND\n";
+        audit_logger_->log_warning("UNKNOWN", "UNKNOWN_COMMAND", "Unknown request: " + request);
     }
 }
 
@@ -281,8 +344,20 @@ std::vector<uint32_t> FedServer::decrypt_signature(const std::vector<unsigned ch
 }
 
 double FedServer::calculate_similarity(const std::vector<uint32_t>& sig1, const std::vector<uint32_t>& sig2) {
-    // 简化实现，实际应计算Jaccard相似度
-    return 0.85;
+    if (sig1.size() != sig2.size()) {
+        return 0.0;
+    }
+    
+    int match_count = 0;
+    int num_hash = sig1.size();
+    
+    for (size_t i = 0; i < sig1.size(); i++) {
+        if (sig1[i] == sig2[i]) {
+            match_count++;
+        }
+    }
+    
+    return static_cast<double>(match_count) / num_hash;
 }
 
 int FedServer::calculate_dynamic_buckets(int num_files) {
@@ -293,18 +368,70 @@ int FedServer::calculate_dynamic_buckets(int num_files) {
     return std::max(1, buckets);
 }
 
+// 批量解密签名 - 使用GPU并行解密
+std::vector<std::vector<uint32_t>> batch_decrypt_signatures(
+    const std::vector<EncryptedCandidate>& candidates,
+    const std::map<std::string, std::string>& client_keys
+) {
+    std::vector<std::vector<uint32_t>> decrypted_signatures;
+    
+    if (candidates.empty()) {
+        return decrypted_signatures;
+    }
+    
+    // 按客户端分组，以便使用对应的密钥
+    std::map<std::string, std::vector<std::pair<size_t, std::vector<unsigned char>>>> client_groups;
+    
+    for (size_t i = 0; i < candidates.size(); ++i) {
+        auto it = client_keys.find(candidates[i].client_id);
+        if (it != client_keys.end()) {
+            client_groups[candidates[i].client_id].push_back({i, candidates[i].encrypted_signature});
+        }
+    }
+    
+    decrypted_signatures.resize(candidates.size());
+    
+    // 对每个客户端的签名进行批量解密
+    for (const auto& group : client_groups) {
+        const std::string& client_id = group.first;
+        auto key_it = client_keys.find(client_id);
+        if (key_it == client_keys.end()) continue;
+        
+        std::vector<std::vector<unsigned char>> encrypted_sigs;
+        std::vector<size_t> indices;
+        
+        for (const auto& item : group.second) {
+            encrypted_sigs.push_back(item.second);
+            indices.push_back(item.first);
+        }
+        
+        // 使用GPU并行解密
+        auto decrypted = gpu_decrypt_signatures(encrypted_sigs, key_it->second);
+        
+        // 将解密结果放回原位置
+        for (size_t i = 0; i < indices.size() && i < decrypted.size(); ++i) {
+            decrypted_signatures[indices[i]] = decrypted[i];
+        }
+    }
+    
+    return decrypted_signatures;
+}
+
 bool FedServer::perform_global_similarity() {
     cout << "[Server] Performing global similarity calculation..." << endl;
     cout << "[Server] Total candidates: " << candidates.size() << endl;
     cout << "[Server] Total buckets: " << bucket_candidates.size() << endl;
     
-    if (cuda_available()) {
-        cout << "[Server] Using GPU acceleration for similarity calculation..." << endl;
+    bool use_gpu = cuda_available();
+    if (use_gpu) {
+        cout << "[Server] Using GPU acceleration for decryption and similarity calculation..." << endl;
     } else {
-        cout << "[Server] CUDA not available, using CPU for similarity calculation..." << endl;
+        cout << "[Server] CUDA not available, using CPU for calculation..." << endl;
     }
     
     cout << "[Server] Classifying candidates by bucket..." << endl;
+    
+    int total_duplicates = 0;
     
     for (const auto& bucket_entry : bucket_candidates) {
         int bucket_id = bucket_entry.first;
@@ -320,25 +447,34 @@ bool FedServer::perform_global_similarity() {
         std::vector<std::string> doc_ids;
         std::vector<std::string> client_ids;
         
-        for (const auto& candidate : bucket_candidates_list) {
-            std::vector<uint32_t> signature = decrypt_signature(candidate.encrypted_signature, candidate.client_id);
-            if (signature.empty()) {
-                cerr << "[Server] Failed to decrypt signature for " << candidate.doc_id << endl;
-                continue;
-            }
+        // 使用GPU批量解密（如果可用）
+        if (use_gpu && bucket_candidates_list.size() >= 10) {
+            cout << "[Server] Using GPU parallel decryption for bucket " << bucket_id << endl;
+            auto decrypted_sigs = batch_decrypt_signatures(bucket_candidates_list, client_keys);
             
-            // 调试：打印前几个签名的值
-            if (signatures.size() < 5) {
-                cout << "[Server] Signature for " << candidate.doc_id << " (" << candidate.client_id << "): ";
-                for (size_t k = 0; k < std::min(size_t(5), signature.size()); ++k) {
-                    cout << signature[k] << " ";
+            for (size_t i = 0; i < bucket_candidates_list.size() && i < decrypted_sigs.size(); ++i) {
+                if (decrypted_sigs[i].empty()) {
+                    cerr << "[Server] Failed to decrypt signature for " << bucket_candidates_list[i].doc_id << endl;
+                    continue;
                 }
-                cout << endl;
+                
+                signatures.push_back(decrypted_sigs[i]);
+                doc_ids.push_back(bucket_candidates_list[i].doc_id);
+                client_ids.push_back(bucket_candidates_list[i].client_id);
             }
-            
-            signatures.push_back(signature);
-            doc_ids.push_back(candidate.doc_id);
-            client_ids.push_back(candidate.client_id);
+        } else {
+            // 使用CPU逐个解密
+            for (const auto& candidate : bucket_candidates_list) {
+                std::vector<uint32_t> signature = decrypt_signature(candidate.encrypted_signature, candidate.client_id);
+                if (signature.empty()) {
+                    cerr << "[Server] Failed to decrypt signature for " << candidate.doc_id << endl;
+                    continue;
+                }
+                
+                signatures.push_back(signature);
+                doc_ids.push_back(candidate.doc_id);
+                client_ids.push_back(candidate.client_id);
+            }
         }
         
         if (signatures.size() < 2) {
@@ -346,33 +482,59 @@ bool FedServer::perform_global_similarity() {
             continue;
         }
         
+        cout << "[Server] Decrypted " << signatures.size() << " signatures for comparison" << endl;
+        
         try {
+            // 使用GPU进行相似度计算
             std::vector<std::pair<int, int>> duplicates = gpu_calculate_similarity(signatures, config.params.threshold);
             
+            int bucket_duplicates = 0;
             for (const auto& dup : duplicates) {
                 int i = dup.first;
                 int j = dup.second;
                 
+                // 只记录跨机构的重复
                 if (client_ids[i] != client_ids[j]) {
-                    duplicate_docs[client_ids[i]].push_back(doc_ids[i]);
-                    duplicate_docs[client_ids[j]].push_back(doc_ids[j]);
-                    cout << "[Server] Found cross-institution duplicate: " 
-                         << doc_ids[i] << " (" << client_ids[i] << ") and " 
-                         << doc_ids[j] << " (" << client_ids[j] << ")" << endl;
+                    // 避免重复添加
+                    bool already_added = false;
+                    for (const auto& existing : duplicate_docs[client_ids[i]]) {
+                        if (existing == doc_ids[i]) {
+                            already_added = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!already_added) {
+                        duplicate_docs[client_ids[i]].push_back(doc_ids[i]);
+                        duplicate_docs[client_ids[j]].push_back(doc_ids[j]);
+                        bucket_duplicates++;
+                        total_duplicates++;
+                        
+                        cout << "[Server] Found cross-institution duplicate: " 
+                             << doc_ids[i] << " (" << client_ids[i] << ") and " 
+                             << doc_ids[j] << " (" << client_ids[j] << ")" << endl;
+                    }
                 }
             }
+            
+            cout << "[Server] Bucket " << bucket_id << ": found " << bucket_duplicates << " cross-institution duplicates" << endl;
+            
         } catch (const std::exception& e) {
             cerr << "[Server] Error processing bucket " << bucket_id << ": " << e.what() << endl;
         }
         
+        // 即时销毁机制：立即清除敏感数据
         signatures.clear();
+        signatures.shrink_to_fit();
         doc_ids.clear();
+        doc_ids.shrink_to_fit();
         client_ids.clear();
+        client_ids.shrink_to_fit();
         
-        cout << "[Server] Bucket " << bucket_id << " processed, data destroyed" << endl;
+        cout << "[Server] Bucket " << bucket_id << " processed, sensitive data destroyed immediately" << endl;
     }
     
-    cout << "[Server] Global similarity calculation completed" << endl;
+    cout << "[Server] Global similarity calculation completed. Total cross-institution duplicates: " << total_duplicates << endl;
     return true;
 }
 

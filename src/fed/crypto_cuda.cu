@@ -7,13 +7,13 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-// GPU矩阵化相似度对比核函数
+// GPU矩阵化相似度对比核函数 - 计算真实Jaccard相似度
 __global__ void similarity_compare_kernel(
     const uint32_t* signatures,      // 所有签名 [num_docs * num_hash]
-    unsigned char* result_matrix,    // 结果矩阵 [num_docs * num_docs]
+    float* similarity_matrix,         // 相似度矩阵 [num_docs * num_docs]
     int num_docs,                    // 文档数量
     int num_hash,                    // 哈希函数数量
-    int threshold                    // 阈值(已乘以num_hash)
+    float threshold                   // 相似度阈值
 ) {
     // 使用tiling策略
     __shared__ uint32_t tile1[32][32];  // 共享内存tile
@@ -47,13 +47,16 @@ __global__ void similarity_compare_kernel(
         __syncthreads();
     }
     
+    // 计算Jaccard相似度
+    float jaccard_similarity = static_cast<float>(match_count) / num_hash;
+    
     // 写入结果矩阵
     if (doc_i < doc_j && doc_j < num_docs) {
-        result_matrix[doc_i * num_docs + doc_j] = (match_count >= threshold) ? 1 : 0;
+        similarity_matrix[doc_i * num_docs + doc_j] = jaccard_similarity;
     }
 }
 
-// GPU加速的相似度计算
+// GPU加速的相似度计算 - 计算真实Jaccard相似度
 std::vector<std::pair<int, int>> gpu_calculate_similarity(
     const std::vector<std::vector<uint32_t>>& signatures,
     double threshold
@@ -64,17 +67,17 @@ std::vector<std::pair<int, int>> gpu_calculate_similarity(
     if (num_docs < 2) return duplicates;
     
     int num_hash = signatures[0].size();
-    int threshold_int = static_cast<int>(threshold * num_hash);
+    float threshold_float = static_cast<float>(threshold);
     
     // 准备GPU内存
     uint32_t* d_signatures;
-    unsigned char* d_result;
+    float* d_similarity;
     
     size_t sig_size = num_docs * num_hash * sizeof(uint32_t);
-    size_t result_size = num_docs * num_docs * sizeof(unsigned char);
+    size_t similarity_size = num_docs * num_docs * sizeof(float);
     
     cudaMalloc(&d_signatures, sig_size);
-    cudaMalloc(&d_result, result_size);
+    cudaMalloc(&d_similarity, similarity_size);
     
     // 复制数据到GPU
     std::vector<uint32_t> flat_signatures;
@@ -83,7 +86,7 @@ std::vector<std::pair<int, int>> gpu_calculate_similarity(
     }
     
     cudaMemcpy(d_signatures, flat_signatures.data(), sig_size, cudaMemcpyHostToDevice);
-    cudaMemset(d_result, 0, result_size);
+    cudaMemset(d_similarity, 0, similarity_size);
     
     // 配置网格和块
     dim3 blockDim(32, 32);
@@ -91,20 +94,21 @@ std::vector<std::pair<int, int>> gpu_calculate_similarity(
     
     // 启动核函数
     similarity_compare_kernel<<<gridDim, blockDim>>>(
-        d_signatures, d_result, num_docs, num_hash, threshold_int
+        d_signatures, d_similarity, num_docs, num_hash, threshold_float
     );
     
     // 等待核函数完成
     cudaDeviceSynchronize();
     
     // 复制结果回CPU
-    std::vector<unsigned char> result(num_docs * num_docs);
-    cudaMemcpy(result.data(), d_result, result_size, cudaMemcpyDeviceToHost);
+    std::vector<float> similarity_matrix(num_docs * num_docs);
+    cudaMemcpy(similarity_matrix.data(), d_similarity, similarity_size, cudaMemcpyDeviceToHost);
     
-    // 解析结果
+    // 解析结果 - 使用阈值过滤
     for (int i = 0; i < num_docs; i++) {
         for (int j = i + 1; j < num_docs; j++) {
-            if (result[i * num_docs + j]) {
+            float sim = similarity_matrix[i * num_docs + j];
+            if (sim >= threshold_float) {
                 duplicates.emplace_back(i, j);
             }
         }
@@ -112,7 +116,7 @@ std::vector<std::pair<int, int>> gpu_calculate_similarity(
     
     // 释放GPU内存
     cudaFree(d_signatures);
-    cudaFree(d_result);
+    cudaFree(d_similarity);
     
     return duplicates;
 }
