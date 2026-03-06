@@ -180,3 +180,13 @@ void AuthManager::update_last_seen(const std::string& client_id, const std::stri
         it->second.ip_address = ip_address;
     }
 }
+
+bool AuthManager::is_client_registered(const std::string& client_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    
+    if (!initialized_) {
+        return false;
+    }
+    
+    return clients_.find(client_id) != clients_.end();
+}

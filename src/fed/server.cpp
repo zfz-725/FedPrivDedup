@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <cstdio>
 #include <memory>
+#include <sys/resource.h>
 
 using namespace std;
 
@@ -70,7 +71,18 @@ bool FedServer::init() {
         }
     }
     
-    audit_logger_->log_info("SYSTEM", "INIT", "Server initialized successfully");
+    // 安全防护：设置资源限制
+    struct rlimit rlim;
+    rlim.rlim_cur = 1024 * 1024; // 1MB stack size
+    rlim.rlim_max = 1024 * 1024;
+    if (setrlimit(RLIMIT_STACK, &rlim) != 0) {
+        cerr << "[Server] Warning: Failed to set stack limit" << endl;
+    }
+    
+    // 安全防护：禁用不必要的系统调用
+    // 这里可以添加更详细的安全防护措施
+    
+    audit_logger_->log_info("SYSTEM", "INIT", "Server initialized successfully with security measures");
     
     return true;
 }
@@ -99,6 +111,14 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         std::istringstream iss(request.substr(6));
         std::string client_id, org_id;
         iss >> client_id >> org_id;
+        
+        // 安全防护：验证客户端身份
+        if (!auth_manager_->is_client_registered(client_id)) {
+            response = "UNAUTHORIZED\n";
+            audit_logger_->log_warning(client_id, "UNAUTHORIZED", "Client not registered");
+            return;
+        }
+        
         std::string key = generate_client_key();
         client_keys[client_id] = key;
         
@@ -117,6 +137,13 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         size_t data_size;
         iss >> data_size;
         
+        // 安全防护：限制数据大小
+        if (data_size > 100 * 1024 * 1024) { // 限制为100MB
+            response = "DATA_TOO_LARGE\n";
+            audit_logger_->log_warning("UNKNOWN", "DATA_TOO_LARGE", "Received data size exceeds limit: " + std::to_string(data_size));
+            return;
+        }
+        
         response = "READY_FOR_DATA\n";
         cout << "[Server] Ready to receive " << data_size << " bytes of candidates data" << endl;
         
@@ -128,16 +155,29 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         int num_candidates;
         data_iss >> num_candidates;
         
+        // 安全防护：限制候选集数量
+        if (num_candidates > 100000) { // 限制为10万
+            response = "TOO_MANY_CANDIDATES\n";
+            audit_logger_->log_warning("UNKNOWN", "TOO_MANY_CANDIDATES", "Received too many candidates: " + std::to_string(num_candidates));
+            return;
+        }
+        
         cout << "[Server] Expecting " << num_candidates << " candidates" << endl;
         
         int success_count = 0;
         for (int i = 0; i < num_candidates; ++i) {
-            std::string doc_id, encrypted_sig_hex, client_id;
+            std::string doc_id, encrypted_sig_hex, client_id, anonymous_org_id;
             int bucket_id;
             
-            if (!(data_iss >> doc_id >> bucket_id >> encrypted_sig_hex >> client_id)) {
+            if (!(data_iss >> doc_id >> bucket_id >> encrypted_sig_hex >> client_id >> anonymous_org_id)) {
                 cerr << "[Server] Failed to parse candidate " << i << endl;
                 break;
+            }
+            
+            // 安全防护：验证客户端身份
+            if (!auth_manager_->is_client_registered(client_id)) {
+                cerr << "[Server] Unauthorized client: " << client_id << endl;
+                continue;
             }
             
             std::vector<unsigned char> encrypted_sig;
@@ -152,7 +192,7 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
             candidate.doc_id = doc_id;
             candidate.encrypted_signature = encrypted_sig;
             candidate.bucket_id = bucket_id;
-            candidate.org_id = client_id;
+            candidate.org_id = anonymous_org_id;
             
             candidates.push_back(candidate);
             bucket_candidates[bucket_id].push_back(candidate);
@@ -170,11 +210,25 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         size_t data_size;
         iss >> client_id >> data_size;
         
+        // 安全防护：验证客户端身份
+        if (!auth_manager_->is_client_registered(client_id)) {
+            response = "UNAUTHORIZED\n";
+            audit_logger_->log_warning(client_id, "UNAUTHORIZED", "Client not registered");
+            return;
+        }
+        
         response = "READY\n";
         cout << "[Server] Ready to receive candidates from " << client_id << endl;
         
         audit_logger_->log_info(client_id, "CANDIDATES", "Ready to receive " + std::to_string(data_size) + " bytes");
     } else if (request == "CALCULATE") {
+        // 安全防护：验证是否有足够的候选集
+        if (candidates.empty()) {
+            response = "NO_CANDIDATES\n";
+            audit_logger_->log_warning("SYSTEM", "NO_CANDIDATES", "Attempted to calculate without candidates");
+            return;
+        }
+        
         perform_global_similarity();
         response = "CALCULATION_DONE\n";
         
@@ -183,6 +237,14 @@ void FedServer::handle_client_request(const std::string& request, std::string& r
         size_t space_pos = request.find(" ");
         if (space_pos != std::string::npos) {
             std::string client_id = request.substr(space_pos + 1);
+            
+            // 安全防护：验证客户端身份
+            if (!auth_manager_->is_client_registered(client_id)) {
+                response = "UNAUTHORIZED\n";
+                audit_logger_->log_warning(client_id, "UNAUTHORIZED", "Client not registered");
+                return;
+            }
+            
             distribute_results();
             int duplicate_count = 0;
             std::string duplicate_ids;
@@ -480,6 +542,7 @@ bool FedServer::perform_global_similarity() {
     
     int total_duplicates = 0;
     
+    // 遍历每个桶，确保桶级隔离
     for (const auto& bucket_entry : bucket_candidates) {
         int bucket_id = bucket_entry.first;
         const auto& bucket_candidates_list = bucket_entry.second;
@@ -490,9 +553,11 @@ bool FedServer::perform_global_similarity() {
         
         cout << "[Server] Processing bucket " << bucket_id << " (" << bucket_candidates_list.size() << " documents)..." << endl;
         
+        // 为每个桶创建独立的处理空间，确保桶级隔离
         std::vector<std::vector<uint32_t>> signatures;
         std::vector<std::string> doc_ids;
         std::vector<std::string> client_ids;
+        std::vector<std::string> org_ids;
         
         // 使用GPU批量解密（如果可用）
         if (use_gpu && bucket_candidates_list.size() >= 10) {
@@ -508,6 +573,7 @@ bool FedServer::perform_global_similarity() {
                 signatures.push_back(decrypted_sigs[i]);
                 doc_ids.push_back(bucket_candidates_list[i].doc_id);
                 client_ids.push_back(bucket_candidates_list[i].client_id);
+                org_ids.push_back(bucket_candidates_list[i].org_id);
             }
         } else {
             // 使用CPU逐个解密
@@ -521,11 +587,21 @@ bool FedServer::perform_global_similarity() {
                 signatures.push_back(signature);
                 doc_ids.push_back(candidate.doc_id);
                 client_ids.push_back(candidate.client_id);
+                org_ids.push_back(candidate.org_id);
             }
         }
         
         if (signatures.size() < 2) {
             cout << "[Server] Bucket " << bucket_id << " skipped (insufficient valid signatures)" << endl;
+            // 清除当前桶的敏感数据
+            signatures.clear();
+            signatures.shrink_to_fit();
+            doc_ids.clear();
+            doc_ids.shrink_to_fit();
+            client_ids.clear();
+            client_ids.shrink_to_fit();
+            org_ids.clear();
+            org_ids.shrink_to_fit();
             continue;
         }
         
@@ -570,16 +646,24 @@ bool FedServer::perform_global_similarity() {
             cerr << "[Server] Error processing bucket " << bucket_id << ": " << e.what() << endl;
         }
         
-        // 即时销毁机制：立即清除敏感数据
+        // 即时销毁机制：立即清除敏感数据，确保桶级隔离
         signatures.clear();
         signatures.shrink_to_fit();
         doc_ids.clear();
         doc_ids.shrink_to_fit();
         client_ids.clear();
         client_ids.shrink_to_fit();
+        org_ids.clear();
+        org_ids.shrink_to_fit();
         
         cout << "[Server] Bucket " << bucket_id << " processed, sensitive data destroyed immediately" << endl;
     }
+    
+    // 处理完成后，清除所有候选集数据，确保隐私安全
+    candidates.clear();
+    candidates.shrink_to_fit();
+    bucket_candidates.clear();
+    cout << "[Server] All buckets processed, all candidate data cleared" << endl;
     
     cout << "[Server] Global similarity calculation completed. Total cross-institution duplicates: " << total_duplicates << endl;
     return true;

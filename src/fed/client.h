@@ -30,7 +30,7 @@ struct ClientConfig {
         server_address("127.0.0.1"), 
         server_port(8080), 
         org_id("org1"),
-        ca_cert_file("ca.pem"),
+        ca_cert_file("ssl/ca.pem"),
         use_tls(true) {}
 };
 

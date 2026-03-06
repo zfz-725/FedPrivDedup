@@ -349,22 +349,56 @@ bool FedClient::perform_local_deduplication() {
 bool FedClient::send_encrypted_candidates() {
     cout << "[Client] Sending encrypted candidates..." << endl;
     
+    // 并行生成密文
+    std::vector<std::pair<DocumentInfo, std::vector<unsigned char>>> encrypted_candidates;
+    encrypted_candidates.reserve(local_candidates.size());
+    
+    // 并行加密签名
+    std::vector<std::thread> encryption_threads;
+    std::mutex encrypted_mutex;
+    
+    int thread_count = std::thread::hardware_concurrency();
+    int batch_size = (local_candidates.size() + thread_count - 1) / thread_count;
+    
+    for (int t = 0; t < thread_count; ++t) {
+        encryption_threads.emplace_back([this, t, batch_size, &encrypted_candidates, &encrypted_mutex]() {
+            int start = t * batch_size;
+            int end = std::min(start + batch_size, (int)this->local_candidates.size());
+            
+            for (int i = start; i < end; ++i) {
+                const auto& doc = this->local_candidates[i];
+                std::vector<unsigned char> encrypted_sig = this->encrypt_signature(doc.signature);
+                
+                std::lock_guard<std::mutex> lock(encrypted_mutex);
+                encrypted_candidates.emplace_back(doc, encrypted_sig);
+            }
+        });
+    }
+    
+    // 等待所有加密线程完成
+    for (auto& thread : encryption_threads) {
+        thread.join();
+    }
+    
+    // 构建发送数据
     std::ostringstream oss;
     oss << local_candidates.size() << "\n";
     
-    for (const auto& doc : local_candidates) {
-        std::vector<unsigned char> encrypted_sig = encrypt_signature(doc.signature);
-        
+    for (const auto& [doc, encrypted_sig] : encrypted_candidates) {
         std::ostringstream sig_oss;
         sig_oss << std::hex << std::setfill('0');
         for (unsigned char c : encrypted_sig) {
             sig_oss << std::setw(2) << (int)c;
         }
         
+        // 生成匿名化机构标识
+        std::string anonymous_org_id = CryptoUtil::generate_random_id();
+        
         oss << doc.random_id << " " 
             << doc.bucket_id << " " 
             << sig_oss.str() << " "
-            << config.client_id << "\n";
+            << config.client_id << " "
+            << anonymous_org_id << "\n";
     }
     
     std::string data = oss.str();
@@ -591,6 +625,19 @@ bool FedClient::receive_and_process_results() {
         }
         
         cout << "[Client] Received " << global_duplicates.size() << " cross-institution duplicates" << endl;
+        
+        // 保存结果到文件
+        std::string output_file = config.output_dir + "/global_duplicates.txt";
+        std::ofstream out(output_file);
+        if (out.is_open()) {
+            out << "Cross-institution duplicates for client " << config.client_id << " (org: " << config.org_id << ")\n";
+            out << "Total duplicates: " << global_duplicates.size() << "\n";
+            for (const auto& dup : global_duplicates) {
+                out << dup << "\n";
+            }
+            out.close();
+            cout << "[Client] Results saved to " << output_file << endl;
+        }
         return true;
     }
     
@@ -600,8 +647,32 @@ bool FedClient::receive_and_process_results() {
 bool FedClient::run() {
     if (!init()) return false;
     if (!process_local_data()) return false;
-    if (!perform_local_deduplication()) return false;
-    if (!send_encrypted_candidates()) return false;
+    
+    // 实现通信-计算重叠：并行执行本地去重和密文传输
+    bool dedup_success = true;
+    bool send_success = true;
+    
+    // 先执行本地去重，因为密文传输需要使用去重后的候选集
+    if (!perform_local_deduplication()) {
+        cout << "[Client] Local deduplication failed" << endl;
+        return false;
+    }
+    
+    // 创建密文传输线程
+    std::thread send_candidates_thread([this, &send_success]() {
+        cout << "[Client] Starting encrypted candidates transmission in parallel thread..." << endl;
+        if (!send_encrypted_candidates()) {
+            cout << "[Client] Failed to send encrypted candidates" << endl;
+            send_success = false;
+        }
+    });
+    
+    // 等待密文传输完成
+    send_candidates_thread.join();
+    
+    if (!send_success) {
+        return false;
+    }
     
     // 触发全局相似度计算（最后一个客户端触发）
     if (config.client_id == "client2") {

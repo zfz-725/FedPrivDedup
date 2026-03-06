@@ -47,6 +47,7 @@ public:
     void update_last_seen(const std::string& client_id, const std::string& ip_address);
     
     bool generate_api_key(std::string& api_key);
+    bool is_client_registered(const std::string& client_id);
     
 private:
     std::map<std::string, ClientInfo> clients_;

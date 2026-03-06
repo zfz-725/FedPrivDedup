@@ -1,37 +1,71 @@
-[2026-03-06 13:42:37] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 13:42:37] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 13:42:39] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
-[2026-03-06 13:42:40] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 5462 bytes
-[2026-03-06 13:42:40] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 5 candidates
-[2026-03-06 13:42:50] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
-[2026-03-06 13:43:20] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 13:43:20] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 13:43:23] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
-[2026-03-06 13:43:24] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 5462 bytes
-[2026-03-06 13:43:24] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 5 candidates
-[2026-03-06 13:43:34] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
-[2026-03-06 13:43:34] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
-[2026-03-06 13:43:36] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 5462 bytes
-[2026-03-06 13:43:36] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 5 candidates
-[2026-03-06 13:48:59] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 13:48:59] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 13:49:02] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
-[2026-03-06 13:49:03] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 5462 bytes
-[2026-03-06 13:49:03] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 5 candidates
-[2026-03-06 13:49:13] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
-[2026-03-06 13:49:14] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
-[2026-03-06 14:15:53] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 14:15:53] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 14:20:00] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 14:20:00] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 14:20:51] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 14:20:51] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 14:21:54] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 14:21:54] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 14:22:54] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
-[2026-03-06 14:22:54] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
-[2026-03-06 14:23:17] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
-[2026-03-06 14:23:50] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
-[2026-03-06 14:23:51] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 2186 bytes
-[2026-03-06 14:23:51] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
-[2026-03-06 14:24:01] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
+[2026-03-06 15:24:48] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 15:25:21] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 15:25:21] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully with security measures
+[2026-03-06 15:27:23] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 15:27:24] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:27:24] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:27:34] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
+[2026-03-06 15:27:44] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 15:27:46] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:27:46] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:27:46] [INFO] [Client: SYSTEM] [Action: CALCULATE] Global similarity calculation completed
+[2026-03-06 15:27:46] [INFO] [Client: client2] [Action: GET_RESULTS] Sent 2 duplicates
+[2026-03-06 15:33:00] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 15:33:00] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully with security measures
+[2026-03-06 15:33:11] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 15:33:13] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:33:13] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:33:23] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
+[2026-03-06 15:33:32] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 15:33:33] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:33:33] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:33:33] [INFO] [Client: SYSTEM] [Action: CALCULATE] Global similarity calculation completed
+[2026-03-06 15:33:33] [INFO] [Client: client2] [Action: GET_RESULTS] Sent 2 duplicates
+[2026-03-06 15:39:22] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 15:39:22] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:39:22] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:39:32] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 2 duplicates
+[2026-03-06 15:39:33] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 15:39:33] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:39:33] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:39:33] [INFO] [Client: SYSTEM] [Action: CALCULATE] Global similarity calculation completed
+[2026-03-06 15:39:33] [INFO] [Client: client2] [Action: GET_RESULTS] Sent 4 duplicates
+[2026-03-06 15:44:43] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 15:44:43] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:44:43] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:44:53] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 4 duplicates
+[2026-03-06 15:45:04] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 15:45:04] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 2226 bytes
+[2026-03-06 15:45:04] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 15:45:04] [INFO] [Client: SYSTEM] [Action: CALCULATE] Global similarity calculation completed
+[2026-03-06 15:45:04] [INFO] [Client: client2] [Action: GET_RESULTS] Sent 6 duplicates
+[2026-03-06 15:47:42] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 15:47:43] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 3338 bytes
+[2026-03-06 15:47:43] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 3 candidates
+[2026-03-06 15:47:53] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 6 duplicates
+[2026-03-06 15:48:03] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 15:48:03] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 3338 bytes
+[2026-03-06 15:48:03] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 3 candidates
+[2026-03-06 15:48:03] [INFO] [Client: SYSTEM] [Action: CALCULATE] Global similarity calculation completed
+[2026-03-06 15:48:03] [INFO] [Client: client2] [Action: GET_RESULTS] Sent 7 duplicates
+[2026-03-06 15:51:52] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 15:51:52] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 11123 bytes
+[2026-03-06 15:51:52] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 10 candidates
+[2026-03-06 15:52:02] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 7 duplicates
+[2026-03-06 15:52:14] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 15:52:15] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 11123 bytes
+[2026-03-06 15:52:15] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 10 candidates
+[2026-03-06 15:52:15] [INFO] [Client: SYSTEM] [Action: CALCULATE] Global similarity calculation completed
+[2026-03-06 15:52:15] [INFO] [Client: client2] [Action: GET_RESULTS] Sent 10 duplicates
+[2026-03-06 16:03:58] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 16:11:35] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 16:11:35] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully with security measures
+[2026-03-06 16:11:51] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 16:11:52] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 11123 bytes
+[2026-03-06 16:11:52] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 10 candidates
+[2026-03-06 16:12:02] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
+[2026-03-06 16:12:14] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 16:12:16] [INFO] [Client: client2] [Action: CANDIDATES] Ready to receive 11123 bytes
+[2026-03-06 16:12:16] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 10 candidates
+[2026-03-06 16:12:16] [INFO] [Client: SYSTEM] [Action: CALCULATE] Global similarity calculation completed
+[2026-03-06 16:12:16] [INFO] [Client: client2] [Action: GET_RESULTS] Sent 3 duplicates

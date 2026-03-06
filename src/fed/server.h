@@ -31,8 +31,8 @@ struct ServerConfig {
         address("127.0.0.1"), 
         port(8080), 
         max_clients(10),
-        cert_file("cert.pem"),
-        key_file("key.pem"),
+        cert_file("ssl/cert.pem"),
+        key_file("ssl/key.pem"),
         use_tls(true) {}
 };
 
