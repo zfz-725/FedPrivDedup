@@ -19,11 +19,20 @@
 
 using namespace std;
 
-FedClient::FedClient(const ClientConfig& config) : config(config) {
+FedClient::FedClient(const ClientConfig& config) : config(config), ssl_ctx(nullptr), ssl(nullptr) {
 }
 
 bool FedClient::init() {
     cout << "[Client] Initializing client..." << endl;
+    
+    // 初始化TLS
+    if (config.use_tls) {
+        if (!init_tls()) {
+            cout << "[Client] Failed to initialize TLS" << endl;
+            return false;
+        }
+    }
+    
     // 连接服务器获取全局参数
     if (!get_global_params()) {
         cout << "[Client] Failed to get global parameters" << endl;
@@ -382,13 +391,51 @@ bool FedClient::send_encrypted_candidates() {
         return false;
     }
     
+    bool use_ssl = config.use_tls;
+    SSL* local_ssl = nullptr;
+    
+    // 建立SSL连接
+    if (use_ssl) {
+        if (!establish_ssl_connection(sock)) {
+            cout << "[Client] Failed to establish SSL connection" << endl;
+            close(sock);
+            return false;
+        }
+        local_ssl = ssl;
+    }
+    
+    // 发送CANDIDATES消息
     std::string message = "CANDIDATES " + config.client_id + " " + std::to_string(data.length()) + "\n";
-    send(sock, message.c_str(), message.length(), 0);
+    if (use_ssl && local_ssl) {
+        if (ssl_write(message.c_str(), message.length()) <= 0) {
+            cout << "[Client] SSL write failed" << endl;
+            if (local_ssl) {
+                SSL_shutdown(local_ssl);
+                SSL_free(local_ssl);
+                ssl = nullptr;
+            }
+            close(sock);
+            return false;
+        }
+    } else {
+        send(sock, message.c_str(), message.length(), 0);
+    }
     
     char buffer[4096] = {0};
-    int valread = read(sock, buffer, sizeof(buffer) - 1);
+    int valread;
+    if (use_ssl && local_ssl) {
+        valread = ssl_read(buffer, sizeof(buffer) - 1);
+    } else {
+        valread = read(sock, buffer, sizeof(buffer) - 1);
+    }
+    
     if (valread <= 0) {
         cout << "[Client] No READY response" << endl;
+        if (use_ssl && local_ssl) {
+            SSL_shutdown(local_ssl);
+            SSL_free(local_ssl);
+            ssl = nullptr;
+        }
         close(sock);
         return false;
     }
@@ -396,17 +443,46 @@ bool FedClient::send_encrypted_candidates() {
     std::string response(buffer, valread);
     if (response.find("READY") == std::string::npos) {
         cout << "[Client] Server not ready: " << response << endl;
+        if (use_ssl && local_ssl) {
+            SSL_shutdown(local_ssl);
+            SSL_free(local_ssl);
+            ssl = nullptr;
+        }
         close(sock);
         return false;
     }
     
+    // 发送CANDIDATES_DATA消息
     std::string data_header = "CANDIDATES_DATA " + std::to_string(data.length()) + "\n";
-    send(sock, data_header.c_str(), data_header.length(), 0);
+    if (use_ssl && local_ssl) {
+        if (ssl_write(data_header.c_str(), data_header.length()) <= 0) {
+            cout << "[Client] SSL write failed" << endl;
+            if (local_ssl) {
+                SSL_shutdown(local_ssl);
+                SSL_free(local_ssl);
+                ssl = nullptr;
+            }
+            close(sock);
+            return false;
+        }
+    } else {
+        send(sock, data_header.c_str(), data_header.length(), 0);
+    }
     
     memset(buffer, 0, sizeof(buffer));
-    valread = read(sock, buffer, sizeof(buffer) - 1);
+    if (use_ssl && local_ssl) {
+        valread = ssl_read(buffer, sizeof(buffer) - 1);
+    } else {
+        valread = read(sock, buffer, sizeof(buffer) - 1);
+    }
+    
     if (valread <= 0) {
         cout << "[Client] No READY_FOR_DATA response" << endl;
+        if (use_ssl && local_ssl) {
+            SSL_shutdown(local_ssl);
+            SSL_free(local_ssl);
+            ssl = nullptr;
+        }
         close(sock);
         return false;
     }
@@ -414,16 +490,40 @@ bool FedClient::send_encrypted_candidates() {
     std::string data_ready_response(buffer, valread);
     if (data_ready_response.find("READY_FOR_DATA") == std::string::npos) {
         cout << "[Client] Server not ready for data: " << data_ready_response << endl;
+        if (use_ssl && local_ssl) {
+            SSL_shutdown(local_ssl);
+            SSL_free(local_ssl);
+            ssl = nullptr;
+        }
         close(sock);
         return false;
     }
     
-    send(sock, data.c_str(), data.length(), 0);
+    // 发送数据
+    if (use_ssl && local_ssl) {
+        if (ssl_write(data.c_str(), data.length()) <= 0) {
+            cout << "[Client] SSL write failed" << endl;
+            if (local_ssl) {
+                SSL_shutdown(local_ssl);
+                SSL_free(local_ssl);
+                ssl = nullptr;
+            }
+            close(sock);
+            return false;
+        }
+    } else {
+        send(sock, data.c_str(), data.length(), 0);
+    }
     
     bool received_confirmation = false;
     for (int i = 0; i < 2; ++i) {
         memset(buffer, 0, sizeof(buffer));
-        valread = read(sock, buffer, sizeof(buffer) - 1);
+        if (use_ssl && local_ssl) {
+            valread = ssl_read(buffer, sizeof(buffer) - 1);
+        } else {
+            valread = read(sock, buffer, sizeof(buffer) - 1);
+        }
+        
         if (valread <= 0) {
             break;
         }
@@ -437,10 +537,21 @@ bool FedClient::send_encrypted_candidates() {
     
     if (!received_confirmation) {
         cout << "[Client] Data not received" << endl;
+        if (use_ssl && local_ssl) {
+            SSL_shutdown(local_ssl);
+            SSL_free(local_ssl);
+            ssl = nullptr;
+        }
         close(sock);
         return false;
     }
     
+    // 清理
+    if (use_ssl && local_ssl) {
+        SSL_shutdown(local_ssl);
+        SSL_free(local_ssl);
+        ssl = nullptr;
+    }
     close(sock);
     cout << "[Client] Candidates sent successfully, total: " << local_candidates.size() << endl;
     return true;
@@ -534,6 +645,8 @@ bool FedClient::trigger_global_calculation() {
 bool FedClient::communicate_with_server(const std::string& message, std::string& response) {
     int sock = 0;
     struct sockaddr_in serv_addr;
+    bool use_ssl = config.use_tls;
+    SSL* local_ssl = nullptr;
     
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         cout << "[Client] Socket creation error" << endl;
@@ -545,22 +658,152 @@ bool FedClient::communicate_with_server(const std::string& message, std::string&
     
     if (inet_pton(AF_INET, config.server_address.c_str(), &serv_addr.sin_addr) <= 0) {
         cout << "[Client] Invalid address" << endl;
+        close(sock);
         return false;
     }
     
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         cout << "[Client] Connection failed" << endl;
+        close(sock);
         return false;
     }
     
-    send(sock, message.c_str(), message.length(), 0);
+    // 建立SSL连接
+    if (use_ssl) {
+        if (!establish_ssl_connection(sock)) {
+            cout << "[Client] Failed to establish SSL connection" << endl;
+            close(sock);
+            return false;
+        }
+        local_ssl = ssl;
+    }
     
+    // 发送消息
+    if (use_ssl && local_ssl) {
+        if (ssl_write(message.c_str(), message.length()) <= 0) {
+            cout << "[Client] SSL write failed" << endl;
+            if (local_ssl) {
+                SSL_shutdown(local_ssl);
+                SSL_free(local_ssl);
+                ssl = nullptr;
+            }
+            close(sock);
+            return false;
+        }
+    } else {
+        send(sock, message.c_str(), message.length(), 0);
+    }
+    
+    // 接收响应
     char buffer[1024] = {0};
-    int valread = read(sock, buffer, 1024);
+    int valread;
+    if (use_ssl && local_ssl) {
+        valread = ssl_read(buffer, 1024);
+    } else {
+        valread = read(sock, buffer, 1024);
+    }
+    
     if (valread > 0) {
         response = string(buffer, valread);
     }
     
+    // 清理
+    if (use_ssl && local_ssl) {
+        SSL_shutdown(local_ssl);
+        SSL_free(local_ssl);
+        ssl = nullptr;
+    }
     close(sock);
     return true;
+}
+
+// TLS初始化
+bool FedClient::init_tls() {
+    cout << "[Client] Initializing TLS..." << endl;
+    
+    // 初始化OpenSSL库
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    SSL_load_error_strings();
+    
+    // 创建TLS上下文
+    const SSL_METHOD* method = TLS_client_method();
+    ssl_ctx = SSL_CTX_new(method);
+    if (!ssl_ctx) {
+        cerr << "[Client] Failed to create SSL context" << endl;
+        return false;
+    }
+    
+    // 设置TLS版本
+    SSL_CTX_set_min_proto_version(ssl_ctx, TLS1_3_VERSION);
+    SSL_CTX_set_max_proto_version(ssl_ctx, TLS1_3_VERSION);
+    
+    // 加载CA证书
+    if (SSL_CTX_load_verify_locations(ssl_ctx, config.ca_cert_file.c_str(), nullptr) <= 0) {
+        cerr << "[Client] Failed to load CA certificate" << endl;
+        ERR_print_errors_fp(stderr);
+        return false;
+    }
+    
+    // 设置验证模式（测试环境跳过验证）
+    SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, nullptr);
+    
+    cout << "[Client] TLS initialized successfully" << endl;
+    return true;
+}
+
+// TLS清理
+void FedClient::cleanup_tls() {
+    if (ssl) {
+        SSL_free(ssl);
+        ssl = nullptr;
+    }
+    if (ssl_ctx) {
+        SSL_CTX_free(ssl_ctx);
+        ssl_ctx = nullptr;
+    }
+    EVP_cleanup();
+}
+
+// 建立SSL连接
+bool FedClient::establish_ssl_connection(int socket_fd) {
+    ssl = SSL_new(ssl_ctx);
+    if (!ssl) {
+        cerr << "[Client] Failed to create SSL object" << endl;
+        return false;
+    }
+    
+    if (SSL_set_fd(ssl, socket_fd) != 1) {
+        cerr << "[Client] Failed to set socket for SSL" << endl;
+        SSL_free(ssl);
+        ssl = nullptr;
+        return false;
+    }
+    
+    if (SSL_connect(ssl) != 1) {
+        cerr << "[Client] SSL connect failed" << endl;
+        ERR_print_errors_fp(stderr);
+        SSL_free(ssl);
+        ssl = nullptr;
+        return false;
+    }
+    
+    cout << "[Client] SSL connection established" << endl;
+    return true;
+}
+
+// SSL读取
+int FedClient::ssl_read(char* buffer, int buffer_size) {
+    if (!ssl) {
+        return -1;
+    }
+    return SSL_read(ssl, buffer, buffer_size);
+}
+
+// SSL写入
+int FedClient::ssl_write(const char* data, int data_size) {
+    if (!ssl) {
+        return -1;
+    }
+    return SSL_write(ssl, data, data_size);
 }

@@ -377,54 +377,6 @@ src/fed/server_main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_server.dir/build.make CMakeFiles/fed_server.dir/src/fed/server_main.cpp.s
 .PHONY : src/fed/server_main.cpp.s
 
-src/fed/tls_connection.o: src/fed/tls_connection.cpp.o
-.PHONY : src/fed/tls_connection.o
-
-# target to build an object file
-src/fed/tls_connection.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_server.dir/build.make CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o
-.PHONY : src/fed/tls_connection.cpp.o
-
-src/fed/tls_connection.i: src/fed/tls_connection.cpp.i
-.PHONY : src/fed/tls_connection.i
-
-# target to preprocess a source file
-src/fed/tls_connection.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_server.dir/build.make CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.i
-.PHONY : src/fed/tls_connection.cpp.i
-
-src/fed/tls_connection.s: src/fed/tls_connection.cpp.s
-.PHONY : src/fed/tls_connection.s
-
-# target to generate assembly for a file
-src/fed/tls_connection.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_server.dir/build.make CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.s
-.PHONY : src/fed/tls_connection.cpp.s
-
-src/fed/tls_connection_new.o: src/fed/tls_connection_new.cpp.o
-.PHONY : src/fed/tls_connection_new.o
-
-# target to build an object file
-src/fed/tls_connection_new.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_server.dir/build.make CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o
-.PHONY : src/fed/tls_connection_new.cpp.o
-
-src/fed/tls_connection_new.i: src/fed/tls_connection_new.cpp.i
-.PHONY : src/fed/tls_connection_new.i
-
-# target to preprocess a source file
-src/fed/tls_connection_new.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_server.dir/build.make CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.i
-.PHONY : src/fed/tls_connection_new.cpp.i
-
-src/fed/tls_connection_new.s: src/fed/tls_connection_new.cpp.s
-.PHONY : src/fed/tls_connection_new.s
-
-# target to generate assembly for a file
-src/fed/tls_connection_new.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fed_server.dir/build.make CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.s
-.PHONY : src/fed/tls_connection_new.cpp.s
-
 src/fed/union_find.o: src/fed/union_find.cpp.o
 .PHONY : src/fed/union_find.o
 
@@ -487,12 +439,6 @@ help:
 	@echo "... src/fed/server_main.o"
 	@echo "... src/fed/server_main.i"
 	@echo "... src/fed/server_main.s"
-	@echo "... src/fed/tls_connection.o"
-	@echo "... src/fed/tls_connection.i"
-	@echo "... src/fed/tls_connection.s"
-	@echo "... src/fed/tls_connection_new.o"
-	@echo "... src/fed/tls_connection_new.i"
-	@echo "... src/fed/tls_connection_new.s"
 	@echo "... src/fed/union_find.o"
 	@echo "... src/fed/union_find.i"
 	@echo "... src/fed/union_find.s"

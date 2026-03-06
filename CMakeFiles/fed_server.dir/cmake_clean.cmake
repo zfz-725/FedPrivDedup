@@ -11,10 +11,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/fed_server.dir/src/fed/server.cpp.o.d"
   "CMakeFiles/fed_server.dir/src/fed/server_main.cpp.o"
   "CMakeFiles/fed_server.dir/src/fed/server_main.cpp.o.d"
-  "CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o"
-  "CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o.d"
-  "CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o"
-  "CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o.d"
   "fed_server"
   "fed_server.pdb"
 )

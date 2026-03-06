@@ -20,3 +20,18 @@
 [2026-03-06 13:49:03] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 5 candidates
 [2026-03-06 13:49:13] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates
 [2026-03-06 13:49:14] [INFO] [Client: client2] [Action: CONNECT] Client connected from org2
+[2026-03-06 14:15:53] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 14:15:53] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
+[2026-03-06 14:20:00] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 14:20:00] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
+[2026-03-06 14:20:51] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 14:20:51] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
+[2026-03-06 14:21:54] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 14:21:54] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
+[2026-03-06 14:22:54] [INFO] [Client: SYSTEM] [Action: INIT] Audit logger initialized
+[2026-03-06 14:22:54] [INFO] [Client: SYSTEM] [Action: INIT] Server initialized successfully
+[2026-03-06 14:23:17] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 14:23:50] [INFO] [Client: client1] [Action: CONNECT] Client connected from org1
+[2026-03-06 14:23:51] [INFO] [Client: client1] [Action: CANDIDATES] Ready to receive 2186 bytes
+[2026-03-06 14:23:51] [INFO] [Client: UNKNOWN] [Action: CANDIDATES_RECEIVED] Received 2 candidates
+[2026-03-06 14:24:01] [INFO] [Client: client1] [Action: GET_RESULTS] Sent 0 duplicates

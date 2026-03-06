@@ -33,7 +33,7 @@ std::string bytes_to_hex(const std::string& data) {
     return hex_str;
 }
 
-FedServer::FedServer(const ServerConfig& config) : config(config) {
+FedServer::FedServer(const ServerConfig& config) : config(config), ssl_ctx(nullptr) {
 }
 
 bool FedServer::init() {
@@ -61,6 +61,14 @@ bool FedServer::init() {
     
     auth_manager_->register_client("client1", "org1", api_key1, default_permissions);
     auth_manager_->register_client("client2", "org2", api_key2, default_permissions);
+    
+    // 初始化TLS
+    if (config.use_tls) {
+        if (!init_tls()) {
+            cerr << "[Server] Failed to initialize TLS" << endl;
+            return false;
+        }
+    }
     
     audit_logger_->log_info("SYSTEM", "INIT", "Server initialized successfully");
     
@@ -240,17 +248,38 @@ bool FedServer::start() {
             bool waiting_for_data = false;
             size_t expected_data_size = 0;
             std::string data_buffer;
+            SSL* ssl = nullptr;
+            bool use_ssl = config.use_tls;
             
             cout << "[Server] New connection accepted" << endl;
             
+            // 建立SSL连接
+            if (use_ssl) {
+                if (!accept_ssl_connection(new_socket, &ssl)) {
+                    cerr << "[Server] Failed to establish SSL connection" << endl;
+                    close(new_socket);
+                    return;
+                }
+            }
+            
             while (true) {
-                int valread = read(new_socket, buffer, 8192);
+                int valread;
+                if (use_ssl && ssl) {
+                    valread = ssl_read(ssl, buffer, 8192);
+                } else {
+                    valread = read(new_socket, buffer, 8192);
+                }
+                
                 if (valread <= 0) {
                     // 连接关闭，处理剩余的请求
                     if (!request_buffer.empty() && !waiting_for_data) {
                         std::string response;
                         handle_client_request(request_buffer, response);
-                        send(new_socket, response.c_str(), response.length(), 0);
+                        if (use_ssl && ssl) {
+                            ssl_write(ssl, response.c_str(), response.length());
+                        } else {
+                            send(new_socket, response.c_str(), response.length(), 0);
+                        }
                         cout << "[Server] Sent response: '" << response << "'" << endl;
                     }
                     break;
@@ -267,7 +296,11 @@ bool FedServer::start() {
                         // 收到完整的数据
                         std::string response;
                         handle_client_request(data_buffer.substr(0, expected_data_size), response);
-                        send(new_socket, response.c_str(), response.length(), 0);
+                        if (use_ssl && ssl) {
+                            ssl_write(ssl, response.c_str(), response.length());
+                        } else {
+                            send(new_socket, response.c_str(), response.length(), 0);
+                        }
                         cout << "[Server] Sent response: '" << response << "'" << endl;
                         
                         waiting_for_data = false;
@@ -294,20 +327,34 @@ bool FedServer::start() {
                             data_buffer = request_buffer;
                             
                             std::string response = "READY_FOR_DATA\n";
-                            send(new_socket, response.c_str(), response.length(), 0);
+                            if (use_ssl && ssl) {
+                                ssl_write(ssl, response.c_str(), response.length());
+                            } else {
+                                send(new_socket, response.c_str(), response.length(), 0);
+                            }
                             cout << "[Server] Sent response: '" << response << "'" << endl;
                             
                             request_buffer.clear();
                         } else {
                             std::string response;
                             handle_client_request(request, response);
-                            send(new_socket, response.c_str(), response.length(), 0);
+                            if (use_ssl && ssl) {
+                                ssl_write(ssl, response.c_str(), response.length());
+                            } else {
+                                send(new_socket, response.c_str(), response.length(), 0);
+                            }
                             cout << "[Server] Sent response: '" << response << "'" << endl;
                         }
                     }
                 }
                 
                 memset(buffer, 0, 8192);
+            }
+            
+            // 清理SSL连接
+            if (use_ssl && ssl) {
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
             }
             close(new_socket);
         }).detach();
@@ -541,4 +588,95 @@ bool FedServer::perform_global_similarity() {
 bool FedServer::distribute_results() {
     cout << "[Server] Distributing results..." << endl;
     return true;
+}
+
+// TLS初始化
+bool FedServer::init_tls() {
+    cout << "[Server] Initializing TLS..." << endl;
+    
+    // 初始化OpenSSL库
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    SSL_load_error_strings();
+    
+    // 创建TLS上下文
+    const SSL_METHOD* method = TLS_server_method();
+    ssl_ctx = SSL_CTX_new(method);
+    if (!ssl_ctx) {
+        cerr << "[Server] Failed to create SSL context" << endl;
+        return false;
+    }
+    
+    // 设置TLS版本
+    SSL_CTX_set_min_proto_version(ssl_ctx, TLS1_3_VERSION);
+    SSL_CTX_set_max_proto_version(ssl_ctx, TLS1_3_VERSION);
+    
+    // 加载证书和私钥
+    if (SSL_CTX_use_certificate_file(ssl_ctx, config.cert_file.c_str(), SSL_FILETYPE_PEM) <= 0) {
+        cerr << "[Server] Failed to load certificate" << endl;
+        ERR_print_errors_fp(stderr);
+        return false;
+    }
+    
+    if (SSL_CTX_use_PrivateKey_file(ssl_ctx, config.key_file.c_str(), SSL_FILETYPE_PEM) <= 0) {
+        cerr << "[Server] Failed to load private key" << endl;
+        ERR_print_errors_fp(stderr);
+        return false;
+    }
+    
+    // 验证私钥
+    if (!SSL_CTX_check_private_key(ssl_ctx)) {
+        cerr << "[Server] Private key does not match the certificate" << endl;
+        return false;
+    }
+    
+    // 设置验证模式（测试环境跳过验证）
+    SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, nullptr);
+    
+    cout << "[Server] TLS initialized successfully" << endl;
+    return true;
+}
+
+// TLS清理
+void FedServer::cleanup_tls() {
+    if (ssl_ctx) {
+        SSL_CTX_free(ssl_ctx);
+        ssl_ctx = nullptr;
+    }
+    EVP_cleanup();
+}
+
+// 接受SSL连接
+bool FedServer::accept_ssl_connection(int socket_fd, SSL** ssl) {
+    *ssl = SSL_new(ssl_ctx);
+    if (!*ssl) {
+        cerr << "[Server] Failed to create SSL object" << endl;
+        return false;
+    }
+    
+    if (SSL_set_fd(*ssl, socket_fd) != 1) {
+        cerr << "[Server] Failed to set socket for SSL" << endl;
+        SSL_free(*ssl);
+        return false;
+    }
+    
+    if (SSL_accept(*ssl) != 1) {
+        cerr << "[Server] SSL accept failed" << endl;
+        ERR_print_errors_fp(stderr);
+        SSL_free(*ssl);
+        return false;
+    }
+    
+    cout << "[Server] SSL connection established" << endl;
+    return true;
+}
+
+// SSL读取
+int FedServer::ssl_read(SSL* ssl, char* buffer, int buffer_size) {
+    return SSL_read(ssl, buffer, buffer_size);
+}
+
+// SSL写入
+int FedServer::ssl_write(SSL* ssl, const char* data, int data_size) {
+    return SSL_write(ssl, data, data_size);
 }

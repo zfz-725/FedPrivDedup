@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/root/Dev/FED/src -I/root/miniconda3/envs/fed_env/include
+CXX_INCLUDES = -I/root/Dev/FED/src -isystem /usr/include -isystem /usr/local/cuda-12.4/targets/x86_64-linux/include
 
 CXX_FLAGS = -std=gnu++17
 

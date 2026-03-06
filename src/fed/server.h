@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include "params.h"
 #include "audit_logger.h"
 #include "auth_manager.h"
@@ -21,11 +23,17 @@ struct ServerConfig {
     int port;
     int max_clients;
     FedParams params;
+    std::string cert_file; // TLS证书文件路径
+    std::string key_file;  // TLS私钥文件路径
+    bool use_tls;          // 是否使用TLS
     
     ServerConfig() : 
         address("127.0.0.1"), 
         port(8080), 
-        max_clients(10) {}
+        max_clients(10),
+        cert_file("cert.pem"),
+        key_file("key.pem"),
+        use_tls(true) {}
 };
 
 class FedServer {
@@ -51,6 +59,9 @@ private:
     std::unique_ptr<AuditLogger> audit_logger_;
     std::unique_ptr<AuthManager> auth_manager_;
     
+    // TLS相关
+    SSL_CTX* ssl_ctx;
+    
     // 用于处理大数据传输
     size_t pending_data_size;
     std::string pending_data_buffer;
@@ -60,6 +71,13 @@ private:
     double calculate_similarity(const std::vector<uint32_t>& sig1, const std::vector<uint32_t>& sig2);
     int calculate_dynamic_buckets(int num_files); // 动态计算桶数
     std::string generate_client_key();
+    
+    // TLS相关方法
+    bool init_tls();
+    void cleanup_tls();
+    bool accept_ssl_connection(int socket_fd, SSL** ssl);
+    int ssl_read(SSL* ssl, char* buffer, int buffer_size);
+    int ssl_write(SSL* ssl, const char* data, int data_size);
 };
 
 #endif // FED_SERVER_H

@@ -14,8 +14,6 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/root/Dev/FED/src/fed/crypto.cpp" "CMakeFiles/fed_server.dir/src/fed/crypto.cpp.o" "gcc" "CMakeFiles/fed_server.dir/src/fed/crypto.cpp.o.d"
   "/root/Dev/FED/src/fed/server.cpp" "CMakeFiles/fed_server.dir/src/fed/server.cpp.o" "gcc" "CMakeFiles/fed_server.dir/src/fed/server.cpp.o.d"
   "/root/Dev/FED/src/fed/server_main.cpp" "CMakeFiles/fed_server.dir/src/fed/server_main.cpp.o" "gcc" "CMakeFiles/fed_server.dir/src/fed/server_main.cpp.o.d"
-  "/root/Dev/FED/src/fed/tls_connection.cpp" "CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o" "gcc" "CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o.d"
-  "/root/Dev/FED/src/fed/tls_connection_new.cpp" "CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o" "gcc" "CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

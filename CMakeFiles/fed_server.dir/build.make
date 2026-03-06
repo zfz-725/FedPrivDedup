@@ -125,38 +125,10 @@ CMakeFiles/fed_server.dir/src/fed/aes_crypto.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fed_server.dir/src/fed/aes_crypto.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/Dev/FED/src/fed/aes_crypto.cpp -o CMakeFiles/fed_server.dir/src/fed/aes_crypto.cpp.s
 
-CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o: CMakeFiles/fed_server.dir/flags.make
-CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o: src/fed/tls_connection.cpp
-CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o: CMakeFiles/fed_server.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o -MF CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o.d -o CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o -c /root/Dev/FED/src/fed/tls_connection.cpp
-
-CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/Dev/FED/src/fed/tls_connection.cpp > CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.i
-
-CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/Dev/FED/src/fed/tls_connection.cpp -o CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.s
-
-CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o: CMakeFiles/fed_server.dir/flags.make
-CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o: src/fed/tls_connection_new.cpp
-CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o: CMakeFiles/fed_server.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o -MF CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o.d -o CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o -c /root/Dev/FED/src/fed/tls_connection_new.cpp
-
-CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/Dev/FED/src/fed/tls_connection_new.cpp > CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.i
-
-CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/Dev/FED/src/fed/tls_connection_new.cpp -o CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.s
-
 CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o: CMakeFiles/fed_server.dir/flags.make
 CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o: src/fed/audit_logger.cpp
 CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o: CMakeFiles/fed_server.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o -MF CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o.d -o CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o -c /root/Dev/FED/src/fed/audit_logger.cpp
 
 CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.i: cmake_force
@@ -170,7 +142,7 @@ CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.s: cmake_force
 CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o: CMakeFiles/fed_server.dir/flags.make
 CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o: src/fed/auth_manager.cpp
 CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o: CMakeFiles/fed_server.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o -MF CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o.d -o CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o -c /root/Dev/FED/src/fed/auth_manager.cpp
 
 CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.i: cmake_force
@@ -187,8 +159,6 @@ fed_server_OBJECTS = \
 "CMakeFiles/fed_server.dir/src/fed/server.cpp.o" \
 "CMakeFiles/fed_server.dir/src/fed/crypto.cpp.o" \
 "CMakeFiles/fed_server.dir/src/fed/aes_crypto.cpp.o" \
-"CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o" \
-"CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o" \
 "CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o" \
 "CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o"
 
@@ -199,18 +169,15 @@ fed_server: CMakeFiles/fed_server.dir/src/fed/server_main.cpp.o
 fed_server: CMakeFiles/fed_server.dir/src/fed/server.cpp.o
 fed_server: CMakeFiles/fed_server.dir/src/fed/crypto.cpp.o
 fed_server: CMakeFiles/fed_server.dir/src/fed/aes_crypto.cpp.o
-fed_server: CMakeFiles/fed_server.dir/src/fed/tls_connection.cpp.o
-fed_server: CMakeFiles/fed_server.dir/src/fed/tls_connection_new.cpp.o
 fed_server: CMakeFiles/fed_server.dir/src/fed/audit_logger.cpp.o
 fed_server: CMakeFiles/fed_server.dir/src/fed/auth_manager.cpp.o
 fed_server: CMakeFiles/fed_server.dir/build.make
 fed_server: libfed_cuda.a
-fed_server: /root/miniconda3/envs/fed_env/lib64/libcudart_static.a
-fed_server: /usr/lib/x86_64-linux-gnu/librt.a
-fed_server: /usr/lib/x86_64-linux-gnu/libssl.so.3
-fed_server: /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+fed_server: /usr/local/cuda-12.4/targets/x86_64-linux/lib/libcudart.so
+fed_server: /usr/lib/x86_64-linux-gnu/libssl.so
+fed_server: /usr/lib/x86_64-linux-gnu/libcrypto.so
 fed_server: CMakeFiles/fed_server.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable fed_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/root/Dev/FED/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable fed_server"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/fed_server.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

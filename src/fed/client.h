@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include "params.h"
 
 struct DocumentInfo {
@@ -21,11 +23,15 @@ struct ClientConfig {
     std::string output_dir;
     std::string org_id;
     FedParams local_params;
+    std::string ca_cert_file; // CA证书文件路径
+    bool use_tls;             // 是否使用TLS
     
     ClientConfig() : 
         server_address("127.0.0.1"), 
         server_port(8080), 
-        org_id("org1") {}
+        org_id("org1"),
+        ca_cert_file("ca.pem"),
+        use_tls(true) {}
 };
 
 class FedClient {
@@ -48,9 +54,20 @@ private:
     std::vector<DocumentInfo> local_candidates;
     std::string server_key;
     
+    // TLS相关
+    SSL_CTX* ssl_ctx;
+    SSL* ssl;
+    
     std::string generate_random_id();
     std::vector<unsigned char> encrypt_signature(const std::vector<uint32_t>& signature);
     bool communicate_with_server(const std::string& message, std::string& response);
+    
+    // TLS相关方法
+    bool init_tls();
+    void cleanup_tls();
+    bool establish_ssl_connection(int socket_fd);
+    int ssl_read(char* buffer, int buffer_size);
+    int ssl_write(const char* data, int data_size);
 };
 
 #endif // FED_CLIENT_H
